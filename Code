@@ -1,21 +1,34 @@
 #R version 4.3.1
-#Load VQI PVI data (available with approval through SVS PSO https://www.vqi.org/data-analysis/)
+
+#Load packages
 library(readr)
+library(caTools)
+library(ROSE)
+library(dplyr)
+library(caret)
+library(xgboost)
+library(ranger)
+library(naivebayes)
+library(e1071)
+library(nnet)
+library(pROC)
+library(ROCR)
+library(gbm)
+library(DescTools)
+
+#Load VQI PVI data (available with approval through SVS PSO https://www.vqi.org/data-analysis/)
 data <- read_csv("pvi_data.csv")
 
 #Split data into train (70%) and test (30%) sets
-library(caTools)
 set.seed(123)
 sample <- sample.split(data$MALE_DEATH_1yr, SplitRatio = 0.7)
 train <- subset(data, sample == TRUE)
 test <- subset(data, sample == FALSE)
 
 #Apply Random Over-Sample Examples (ROSE) for class balance on training set
-library(ROSE)
 train <- ROSE(MALE_DEATH_1yr ~ ., data = train, N = 235677, seed = 123)$data
 
 #Define predictors
-library(dplyr)
 
 predictors_train_preop <- train %>% select(REGIONID, CENTERID, PHYSICIANID, SURGYEAR, SURGMONTH, SURGWEEKDAY, AGE, GENDER, BMI, RACE, ETHNICITY, PRIMARYINSURER, RURAL, ADI_NATRANK_MEDIAN, SETTING, HTN, PREOP_DIABETES, PREOP_SMOKING, PRIOR_CAD, PREOP_DYSRHYTHMIA, PRIOR_CHF, PRIOR_CVD, COPD, DIALYSIS, PRIOR_CABG, PRIOR_PCI, PRIOR_CEACAS, PRIOR_ANEURYSM, PRIOR_BYPENDARPVI, INFLOWTX, LEGTX, PRIOR_AMP_1, LIVINGSTATUS, PREOP_FUNCSTATUS, PREOP_AMBUL, PREOP_CREAT_UMOL, STRESS, PREOP_ASA, PREOP_P2Y, PREOP_STATIN, PREOP_ACE, PREOP_ANTICOAG, ABI, NUMARTTREAT, ARTERY_1, ARTERY_2, ARTERY_3, ARTERY_4, PROCSIDE_1, PROCSIDE_2, PROCSIDE_3, PROCSIDE_4, R_TXTYPE_1, R_TXTYPE_2, R_TXTYPE_3, R_TXTYPE_4, TREATLEN_1, TREATLEN_2, TREATLEN_3, TREATLEN_4, OCCLEN_1, OCCLEN_2, OCCLEN_3, OCCLEN_4, CALC_1, CALC_2, CALC_3, CALC_4, TASCGRADE_1, TASCGRADE_2, TASCGRADE_3, TASCGRADE_4, SYMPT, BYPPAT, URGENCY)
 
@@ -30,12 +43,6 @@ predictors_train_postop <- train %>% select(REGIONID, CENTERID, PHYSICIANID, SUR
 predictors_test_postop <- test %>% select(REGIONID, CENTERID, PHYSICIANID, SURGYEAR, SURGMONTH, SURGWEEKDAY, AGE, GENDER, BMI, RACE, ETHNICITY, PRIMARYINSURER, RURAL, ADI_NATRANK_MEDIAN, SETTING, HTN, PREOP_DIABETES, PREOP_SMOKING, PRIOR_CAD, PREOP_DYSRHYTHMIA, PRIOR_CHF, PRIOR_CVD, COPD, DIALYSIS, PRIOR_CABG, PRIOR_PCI, PRIOR_CEACAS, PRIOR_ANEURYSM, PRIOR_BYPENDARPVI, INFLOWTX, LEGTX, PRIOR_AMP_1, LIVINGSTATUS, PREOP_FUNCSTATUS, PREOP_AMBUL, PREOP_CREAT_UMOL, STRESS, PREOP_ASA, PREOP_P2Y, PREOP_STATIN, PREOP_ACE, PREOP_ANTICOAG, ABI, NUMARTTREAT, ARTERY_1, ARTERY_2, ARTERY_3, ARTERY_4, PROCSIDE_1, PROCSIDE_2, PROCSIDE_3, PROCSIDE_4, R_TXTYPE_1, R_TXTYPE_2, R_TXTYPE_3, R_TXTYPE_4, TREATLEN_1, TREATLEN_2, TREATLEN_3, TREATLEN_4, OCCLEN_1, OCCLEN_2, OCCLEN_3, OCCLEN_4, CALC_1, CALC_2, CALC_3, CALC_4, TASCGRADE_1, TASCGRADE_2, TASCGRADE_3, TASCGRADE_4, SYMPT, BYPPAT, URGENCY, ACCSITE_1, ACCSIDE_1, ACCGUIDE_1, LGSHEATH_1, PROC_ANTICOAGULANT, NUMDEV_1, NUMDEV_2, NUMDEV_3, NUMDEV_4, CONCOMITANT_1_1, CONCOMITANT_1_2, CONCOMITANT_1_3, CONCOMITANT_1_4, CONCOMITANT_1_5, CONCOMITANT_1_6, FEMENDART, C02, PROTAMINE, CONTRAST, FLUOROTIME, TECHRESULT_1, TECHRESULT_2, TECHRESULT_3, TECHRESULT_4, CARDIACCOMP, POSTOP_MI, PULMCOMP, RENALCOMP, ACCSITECOMP, CONTRASTCOMP, DC_ASA, DC_P2Y, DC_STATIN, DC_ACE, DC_ANTICOAG, TOTAL_LOS, NON_HOME_DC)
 
 #Train pre-op models
-library(caret)
-library(xgboost)
-library(ranger)
-library(naivebayes)
-library(e1071)
-library(nnet)
 train_control <- trainControl(method = "cv", number = 10) #10-fold cross-validation
 
 #Train XGBoost
@@ -63,7 +70,6 @@ LRgrid <- expand.grid(C = c(0.001, 0.01, 0.1, 1, 10, 100, 10000))
 LR <- train(x = predictors_train_preop, y = train$MALE_DEATH_1yr, data = train, method = "glm", metric = "ROC", trControl = train_control, tuneGrid = LRgrid, family = "binomial")
 
 #Evaluate pre-op models on test set
-library(pROC)
 
 XGB_pred <- predict(XGB, as.matrix(predictors_test_preop))
 auc(test$MALE_DEATH_1yr, XGB_pred)
@@ -108,7 +114,7 @@ XGB_intraop <- train(x = as.matrix(predictors_train_intraop), y = train$MALE_DEA
 XGB_postop <- train(x = as.matrix(predictors_train_postop), y = train$MALE_DEATH_1yr, data = train, method = "xgbTree", metric = "ROC", trControl = train_control, tuneGrid = XGBgrid)
 
 #Generate ROC curves
-library(ROCR)
+
 XGB_preop_pred <- predict(XGB_preop, as.matrix(predictors_test_preop))
 XGB_preop_perf <- prediction(XGB_preop_pred, test$MALE_DEATH_1yr)
 XGB_preop_perf <- performance(XGB_preop_perf, "tpr", "fpr")
@@ -127,13 +133,13 @@ plot(XGB_postop_perf, add = TRUE, col = 'orange')
 abline(a=0,b=1)
 
 #Generate calibration plots
-library(gbm)
+
 calibrate.plot(test$MALE_DEATH_1yr, XGB_preop_pred)
 calibrate.plot(test$MALE_DEATH_1yr, XGB_intraop_pred)
 calibrate.plot(test$MALE_DEATH_1yr, XGB_postop_pred)
 
 #Calculate Brier Scores
-library(DescTools)
+
 BrierScore(XGB_preop_pred, test$MALE_DEATH_1yr)
 BrierScore(XGB_intraop_pred, test$MALE_DEATH_1yr)
 BrierScore(XGB_postop_pred, test$MALE_DEATH_1yr)
