@@ -6,4 +6,4 @@ Inputs: There are 112 potential input features (75 pre-operative [demographic/cl
 
 Outputs: Binary prediction positive or negative for 1-year major adverse limb event (composite of thrombectomy/thrombolysis, surgical reintervention, or major amputation) or death.
 
-Constraints: The models were developed using data from the Vascular Quality Initiative Database, a volunary registry primarily comprising data from North American centers. Future work is needed to assess generalizability of the models in a prospective setting.
+Constraints: The models were developed using data from the Vascular Quality Initiative Database, a voluntary registry primarily comprising data from North American centers. Future work is needed to assess generalizability of the models in a prospective setting.
