@@ -1,4 +1,4 @@
-# This code was used to develop and evaluate machine learning models for the prediction of 1-year major adverse limb event or death following endovascular intervention for peripheral artery disease using the Vascular Quality Initiative Database in the manuscript entitled "Using machine learning to predict outcomes following endovascular intervention for peripheral artery disease" by Li and colleagues. The code was written in R verison 4.3.1.
+# This code was used to develop and evaluate machine learning models for predicting 1-year major adverse limb event or death following endovascular intervention for peripheral artery disease (PAD) using the Vascular Quality Initiative Database in the manuscript entitled "Machine Learning to Predict Outcomes of Endovascular Intervention for Patients With PAD" by Li and colleagues. The code was written in R verison 4.3.1.
 
 Purpose: The machine learning models are designed to predict 1-year outcomes following endovascular intervention for peripheral artery disease using pre-, intra-, and post-operative data available through the Vascular Quality Initiative Database.
 
